@@ -3,8 +3,13 @@
 namespace msm {
 
   namespace {
-    __global__ void
-    precompute_points_kernel(const bn254::affine_t* points, int shift, int prec_factor, int count, bn254::affine_t* points_out, bool is_montgomery)
+    __global__ void precompute_points_kernel(
+      const bn254::affine_t* points,
+      int shift,
+      int prec_factor,
+      int count,
+      bn254::affine_t* points_out,
+      bool is_montgomery)
     {
       int tid = blockIdx.x * blockDim.x + threadIdx.x;
       if (tid >= count) return;
@@ -192,7 +197,8 @@ namespace msm {
         unsigned point_ind = point_indices[bucket_offset + i];
         bn254::affine_t point = points[point_ind];
         bucket = i || !init_buckets ? (point == bn254::affine_t::zero() ? bucket : bucket + point)
-                                    : (point == bn254::affine_t::zero() ? bn254::projective_t::zero() : bn254::projective_t::from_affine(point));
+                                    : (point == bn254::affine_t::zero() ? bn254::projective_t::zero()
+                                                                        : bn254::projective_t::from_affine(point));
       }
       buckets[bucket_index] = bucket;
     }
@@ -224,8 +230,9 @@ namespace msm {
            i++) { // add the relevant points starting from the relevant offset up to the bucket size
         unsigned point_ind = point_indices[bucket_offset + i];
         bn254::affine_t point = points[point_ind];
-        bucket =
-          i ? (point == bn254::affine_t::zero() ? bucket : bucket + point) : (point == bn254::affine_t::zero() ? bn254::projective_t::zero() : bn254::projective_t::from_affine(point));
+        bucket = i ? (point == bn254::affine_t::zero() ? bucket : bucket + point)
+                   : (point == bn254::affine_t::zero() ? bn254::projective_t::zero()
+                                                       : bn254::projective_t::from_affine(point));
       }
       buckets[tid] = run_length ? bucket : bn254::projective_t::zero();
     }
@@ -252,7 +259,8 @@ namespace msm {
 
     // this kernel sums the entire bucket module
     // each thread deals with a single bucket module
-    __global__ void big_triangle_sum_kernel(const bn254::projective_t* buckets, bn254::projective_t* final_sums, unsigned nof_bms, unsigned c)
+    __global__ void big_triangle_sum_kernel(
+      const bn254::projective_t* buckets, bn254::projective_t* final_sums, unsigned nof_bms, unsigned c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_bms) return;
@@ -293,7 +301,11 @@ namespace msm {
     // this kernel computes the final result using the double and add algorithm
     // it is done by a single thread
     __global__ void final_accumulation_kernel(
-      const bn254::projective_t* final_sums, bn254::projective_t* final_results, unsigned nof_msms, unsigned nof_results, unsigned c)
+      const bn254::projective_t* final_sums,
+      bn254::projective_t* final_results,
+      unsigned nof_msms,
+      unsigned nof_results,
+      unsigned c)
     {
       unsigned tid = (blockIdx.x * blockDim.x) + threadIdx.x;
       if (tid >= nof_msms) return;
@@ -310,7 +322,7 @@ namespace msm {
       final_results[tid] = final_result + final_sums[tid * nof_results];
     }
 
-    template<typename E>
+    template <typename E>
     static cudaError_t from_montgomery_on_device(const E* d_input, int n, cudaStream_t stream, E* d_output)
     {
       auto config = default_vec_ops_config();
@@ -320,7 +332,6 @@ namespace msm {
       config.stream = stream;
       return montgomery::ConvertMontgomery<E, false>(d_input, n, config, d_output);
     }
-
 
     static cudaError_t split_and_sort_scalars(
       cudaStream_t stream,
@@ -420,8 +431,8 @@ namespace msm {
       if (!are_scalars_on_device) {
         // copy scalars to gpu
         CHK_IF_RETURN(cudaMallocAsync(&d_allocated_scalars, sizeof(bn254::scalar_t) * nof_scalars, stream));
-        CHK_IF_RETURN(
-          cudaMemcpyAsync(d_allocated_scalars, scalars, sizeof(bn254::scalar_t) * nof_scalars, cudaMemcpyHostToDevice, stream));
+        CHK_IF_RETURN(cudaMemcpyAsync(
+          d_allocated_scalars, scalars, sizeof(bn254::scalar_t) * nof_scalars, cudaMemcpyHostToDevice, stream));
 
         if (are_scalars_montgomery_form) {
           CHK_IF_RETURN(from_montgomery_on_device(d_allocated_scalars, nof_scalars, stream, d_allocated_scalars));
@@ -456,8 +467,8 @@ namespace msm {
         if (!are_points_on_device) {
           // copy points to gpu
           CHK_IF_RETURN(cudaMallocAsync(&d_allocated_points, sizeof(bn254::affine_t) * nof_points, stream_points));
-          CHK_IF_RETURN(
-            cudaMemcpyAsync(d_allocated_points, points, sizeof(bn254::affine_t) * nof_points, cudaMemcpyHostToDevice, stream_points));
+          CHK_IF_RETURN(cudaMemcpyAsync(
+            d_allocated_points, points, sizeof(bn254::affine_t) * nof_points, cudaMemcpyHostToDevice, stream_points));
 
           if (are_points_montgomery_form) {
             CHK_IF_RETURN(from_montgomery_on_device(d_allocated_points, nof_points, stream_points, d_allocated_points));
@@ -496,7 +507,8 @@ namespace msm {
       unsigned* d_bucket_offsets)
     {
       if (init_buckets) {
-        CHK_IF_RETURN(cudaMallocAsync(&buckets, sizeof(bn254::projective_t) * (total_nof_buckets + nof_bms_in_batch), stream));
+        CHK_IF_RETURN(
+          cudaMallocAsync(&buckets, sizeof(bn254::projective_t) * (total_nof_buckets + nof_bms_in_batch), stream));
 
         // launch the bucket initialization kernel with maximum threads
         unsigned NUM_THREADS = 1 << 10;
@@ -642,7 +654,8 @@ namespace msm {
         large_bucket_indices);
 
       bn254::projective_t* large_buckets;
-      CHK_IF_RETURN(cudaMallocAsync(&large_buckets, sizeof(bn254::projective_t) * large_buckets_nof_threads, stream_large_buckets));
+      CHK_IF_RETURN(
+        cudaMallocAsync(&large_buckets, sizeof(bn254::projective_t) * large_buckets_nof_threads, stream_large_buckets));
 
       NUM_THREADS = max(1, min(1 << 8, large_buckets_nof_threads));
       NUM_BLOCKS = (large_buckets_nof_threads + NUM_THREADS - 1) / NUM_THREADS;
@@ -779,7 +792,8 @@ namespace msm {
           const unsigned target_bits_count = (source_bits_count + 1) >> 1;                 // half the bits rounded up
           target_windows_count = source_windows_count << 1;                                // twice the number of bms
           const unsigned target_buckets_count = target_windows_count << target_bits_count; // new_bms*2^new_c
-          CHK_IF_RETURN(cudaMallocAsync(&target_buckets, sizeof(bn254::projective_t) * target_buckets_count * batch_size, stream));
+          CHK_IF_RETURN(
+            cudaMallocAsync(&target_buckets, sizeof(bn254::projective_t) * target_buckets_count * batch_size, stream));
           CHK_IF_RETURN(cudaMallocAsync(
             &temp_buckets1, sizeof(bn254::projective_t) * source_buckets_count * batch_size,
             stream)); // for type1 reduction (strided, bottom window - evens)
@@ -832,7 +846,8 @@ namespace msm {
             nof_bms_per_msm = target_windows_count;
             unsigned total_nof_final_results = nof_final_results_per_msm * batch_size;
 
-            CHK_IF_RETURN(cudaMallocAsync(&final_results, sizeof(bn254::projective_t) * total_nof_final_results, stream));
+            CHK_IF_RETURN(
+              cudaMallocAsync(&final_results, sizeof(bn254::projective_t) * total_nof_final_results, stream));
 
             unsigned NUM_THREADS = 32;
             unsigned NUM_BLOCKS = (total_nof_final_results + NUM_THREADS - 1) / NUM_THREADS;
@@ -1008,7 +1023,8 @@ namespace msm {
 
       if (!are_results_on_device)
         CHK_IF_RETURN(cudaMemcpyAsync(
-          final_result, d_allocated_final_result, sizeof(bn254::projective_t) * batch_size, cudaMemcpyDeviceToHost, stream));
+          final_result, d_allocated_final_result, sizeof(bn254::projective_t) * batch_size, cudaMemcpyDeviceToHost,
+          stream));
 
       // (7) cleaunp - free memory and release streams+events (possibly async)
       if (d_allocated_scalars) CHK_IF_RETURN(cudaFreeAsync(d_allocated_scalars, stream));
@@ -1062,7 +1078,8 @@ namespace msm {
     indices_mem = 7 * sizeof(unsigned) * msm_size * batch_size *
                   nof_bms; // factor 7 as an estimation for the sorting extra memory. can be reduced by
                            // sorting separately or changing sort algorithm
-    points_mem = sizeof(bn254::affine_t) * msm_size * config.precompute_factor * (config.are_points_shared_in_batch ? 1 : batch_size);
+    points_mem = sizeof(bn254::affine_t) * msm_size * config.precompute_factor *
+                 (config.are_points_shared_in_batch ? 1 : batch_size);
     buckets_mem = 4 * sizeof(bn254::projective_t) * (1 << c) * batch_size *
                   nof_bms_after_precomputation; // factor 3 for the extra memory in the iterative reduction algorithm.
                                                 // +1 for large buckets. can be reduced with some optimizations.
@@ -1126,8 +1143,9 @@ namespace msm {
           fixed_c = floor(std::log2(
             static_cast<double>(reduced_gpu_memory) /
             static_cast<double>(
-              3 * sizeof(bn254::projective_t) * nof_bms_after_precomputation))); // nof_bms_after_precomputation is a function of c so
-                                                               // there is no analytical solution, hence the while loop
+              3 * sizeof(bn254::projective_t) *
+              nof_bms_after_precomputation))); // nof_bms_after_precomputation is a function of c so
+                                               // there is no analytical solution, hence the while loop
           compute_required_memory(
             config, msm_size, fixed_c, 1, bitsize, nof_bms_after_precomputation, scalars_mem, indices_mem, points_mem,
             buckets_mem, reduced_gpu_memory);
@@ -1308,7 +1326,12 @@ namespace msm {
     return CHK_LAST();
   }
 
-  cudaError_t msm_cuda(const bn254::scalar_t* scalars, const bn254::affine_t* points, int msm_size, const MSMConfig& config, bn254::projective_t* results)
+  cudaError_t msm_cuda(
+    const bn254::scalar_t* scalars,
+    const bn254::affine_t* points,
+    int msm_size,
+    const MSMConfig& config,
+    bn254::projective_t* results)
   {
     const int bitsize = (config.bitsize == 0) ? bn254::scalar_t::NBITS : config.bitsize;
     cudaStream_t stream = reinterpret_cast<cudaStream_t>(config.stream);
@@ -1371,7 +1394,8 @@ namespace msm {
     bn254::affine_t* points_d;
     if (!are_points_on_device) {
       CHK_IF_RETURN(cudaMallocAsync(&points_d, sizeof(bn254::affine_t) * points_size, stream));
-      CHK_IF_RETURN(cudaMemcpyAsync(points_d, points, sizeof(bn254::affine_t) * points_size, cudaMemcpyHostToDevice, stream));
+      CHK_IF_RETURN(
+        cudaMemcpyAsync(points_d, points, sizeof(bn254::affine_t) * points_size, cudaMemcpyHostToDevice, stream));
     }
 
     unsigned total_nof_bms = (bn254::projective_t::SCALAR_FF_NBITS - 1) / c + 1;
@@ -1406,8 +1430,8 @@ namespace msm {
       points_precomputed_d = points_precomputed;
     } else {
       CHK_IF_RETURN(cudaMallocAsync(&points_d, sizeof(bn254::affine_t) * chunk_size * 2, stream));
-      CHK_IF_RETURN(
-        cudaMallocAsync(&points_precomputed_d, sizeof(bn254::affine_t) * chunk_size * 2 * config.precompute_factor, stream));
+      CHK_IF_RETURN(cudaMallocAsync(
+        &points_precomputed_d, sizeof(bn254::affine_t) * chunk_size * 2 * config.precompute_factor, stream));
       points_precomputed_h = points_precomputed;
     }
     for (int i = 0; i < nof_chunks; i++) {
@@ -1415,7 +1439,8 @@ namespace msm {
       if (sub_msm_size <= 0) break;
       if (!config.are_points_on_device) {
         CHK_IF_RETURN(cudaMemcpyAsync(
-          points_d + (i % 2) * chunk_size, points + i * chunk_size, sizeof(bn254::affine_t) * sub_msm_size, cudaMemcpyHostToDevice,
+          points_d + (i % 2) * chunk_size, points + i * chunk_size, sizeof(bn254::affine_t) * sub_msm_size,
+          cudaMemcpyHostToDevice,
           stream)); // points are on host
         CHK_IF_RETURN((precompute_msm_points_chunk(
           points_d + (i % 2) * chunk_size, sub_msm_size, config.precompute_factor, c, true,
@@ -1454,14 +1479,14 @@ namespace msm {
     return nof_chunks;
   }
 
-  static cudaError_t
-  cuda_precompute_msm_points(const bn254::affine_t* points, int msm_size, const MSMConfig& config, bn254::affine_t* output_points)
+  static cudaError_t cuda_precompute_msm_points(
+    const bn254::affine_t* points, int msm_size, const MSMConfig& config, bn254::affine_t* output_points)
   {
     unsigned c = (config.c == 0) ? min(get_optimal_c(msm_size), MAX_C_FOR_PRECOMPUTATION)
                                  : config.c; // limit precomputation c so we won't run into bucket memory overflow in
                                              // msm (TODO - find better solution)
-    int nof_chunks = get_precomputation_nof_chunks(
-      config, msm_size, config.are_points_shared_in_batch ? 1 : config.batch_size);
+    int nof_chunks =
+      get_precomputation_nof_chunks(config, msm_size, config.are_points_shared_in_batch ? 1 : config.batch_size);
     if (nof_chunks) {
       return CHK_STICKY((chunked_precompute(
         points, msm_size, c, config.are_points_shared_in_batch ? 1 : config.batch_size, config, output_points,
@@ -1481,14 +1506,23 @@ namespace msm {
   }
 
   static eIcicleError msm_cuda_wrapper(
-    const Device& device, const bn254::scalar_t* scalars, const bn254::affine_t* bases, int msm_size, const MSMConfig& config, bn254::projective_t* results)
+    const Device& device,
+    const bn254::scalar_t* scalars,
+    const bn254::affine_t* bases,
+    int msm_size,
+    const MSMConfig& config,
+    bn254::projective_t* results)
   {
     auto err = msm_cuda(scalars, bases, msm_size, config, results);
     return translateCudaError(err);
   }
 
   static eIcicleError msm_precompute_bases_cuda_wrapper(
-    const Device& device, const bn254::affine_t* input_bases, int nof_bases, const MSMConfig& config, bn254::affine_t* output_bases)
+    const Device& device,
+    const bn254::affine_t* input_bases,
+    int nof_bases,
+    const MSMConfig& config,
+    bn254::affine_t* output_bases)
   {
     auto err = cuda_precompute_msm_points(input_bases, nof_bases, config, output_bases);
     return translateCudaError(err);

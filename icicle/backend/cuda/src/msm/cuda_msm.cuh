@@ -28,8 +28,13 @@
 #define MAX_C_FOR_PRECOMPUTATION 22
 
 namespace msm {
-  static cudaError_t
-  cuda_precompute_msm_points(const bn254::affine_t* points, int msm_size, const MSMConfig& config, bn254::affine_t* output_points);
+  static cudaError_t cuda_precompute_msm_points(
+    const bn254::affine_t* points, int msm_size, const MSMConfig& config, bn254::affine_t* output_points);
 
-  cudaError_t msm_cuda(const bn254::scalar_t* scalars, const bn254::affine_t* points, int msm_size, const MSMConfig& config, bn254::projective_t* results);
-}
+  cudaError_t msm_cuda(
+    const bn254::scalar_t* scalars,
+    const bn254::affine_t* points,
+    int msm_size,
+    const MSMConfig& config,
+    bn254::projective_t* results);
+} // namespace msm
