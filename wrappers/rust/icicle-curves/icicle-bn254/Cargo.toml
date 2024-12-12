@@ -20,7 +20,7 @@ serial_test = "3.0.0"
 cmake = "0.1.50"
 
 [features]
-default = []
+default = ["cuda_backend"]
 no_g2 = []
 no_ecntt = []
 cuda_backend = ["icicle-runtime/cuda_backend"]
