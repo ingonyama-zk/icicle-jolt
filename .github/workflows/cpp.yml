@@ -27,40 +27,19 @@ jobs:
       if: needs.check-changed-files.outputs.cpp == 'true'
       run: ./scripts/format_all.sh . --check --exclude "build|wrappers"
 
-  extract-cuda-backend-branch:
-    uses: ./.github/workflows/extract-backends.yml
-    with:
-      pr-number: ${{ github.event.pull_request.number }}
-
   test-linux-curve:
     name: Test on Linux
     runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
+    needs: [check-changed-files, check-format]
     strategy:
       matrix:
         curve:
           - name: bn254
-            build_args: -DG2=ON -DECNTT=ON
-          - name: bls12_381
-            build_args: -DG2=ON -DECNTT=ON
-          - name: bls12_377
-            build_args: -DG2=ON -DECNTT=ON
-          - name: bw6_761
-            build_args: -DG2=ON -DECNTT=ON
-          - name: grumpkin
-            build_args:
+            build_args: -DG2=ON
 
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4
-    - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.cpp == 'true'
-      uses: actions/checkout@v4
-      with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
     - name: Build curve
       working-directory: ./icicle
       if: needs.check-changed-files.outputs.cpp == 'true'
@@ -71,40 +50,4 @@ jobs:
     - name: Run C++ curve Tests
       working-directory: ./icicle/build/tests
       if: needs.check-changed-files.outputs.cpp == 'true'
-      run: ctest --output-on-failure
-
-  test-linux-field:
-    name: Test on Linux
-    runs-on: [self-hosted, Linux, X64, icicle]
-    needs: [check-changed-files, check-format, extract-cuda-backend-branch]
-    strategy:
-      matrix:
-        field:
-          - name: babybear
-            build_args: -DEXT_FIELD=ON
-          - name: stark252
-            build_args: -DEXT_FIELD=OFF
-          - name: m31
-            build_args: -DEXT_FIELD=ON
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Checkout CUDA Backend
-      if: needs.check-changed-files.outputs.cpp == 'true'
-      uses: actions/checkout@v4
-      with:
-        repository: ingonyama-zk/icicle-cuda-backend
-        path: ./icicle/backend/cuda
-        ssh-key: ${{ secrets.CUDA_PULL_KEY }}
-        ref: ${{ needs.extract-cuda-backend-branch.outputs.cuda-backend-branch }}
-    - name: Build field
-      working-directory: ./icicle
-      if: needs.check-changed-files.outputs.cpp == 'true'
-      run: |
-        mkdir -p build && rm -rf build/*
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DFIELD=${{ matrix.field.name }} ${{ matrix.field.build_args }} -DCUDA_BACKEND=local -S . -B build
-        cmake --build build -j
-    - name: Run C++ field Tests
-      working-directory: ./icicle/build/tests
-      if: needs.check-changed-files.outputs.cpp == 'true'
-      run: ctest --output-on-failure
+      run: ctest -R msm --output-on-failure

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.18)
 include(cmake/Common.cmake)
 find_cuda_compiler()
 
+option(G2 "Build G2 MSM" ON)
+
 project(icicle_cuda_backend LANGUAGES CUDA CXX)
 
 set_env()
