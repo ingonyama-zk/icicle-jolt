@@ -13,15 +13,11 @@ set_gpu_env()
 find_package(CUDAToolkit REQUIRED)
 
 # device API library
-add_library(icicle_backend_cuda_device SHARED src/cuda_device_api.cu)
+add_library(icicle_backend_cuda_device STATIC src/cuda_device_api.cu)
 target_include_directories(icicle_backend_cuda_device PRIVATE include)
 target_include_directories(icicle_backend_cuda_device PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_link_libraries(icicle_backend_cuda_device PUBLIC pthread)
-
-install(TARGETS icicle_backend_cuda_device
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/backend/cuda
-    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/backend/cuda
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/backend/cuda)
+# set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "icicle_backend_cuda_device")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_custom_command(TARGET icicle_backend_cuda_device POST_BUILD
@@ -31,7 +27,7 @@ endif()
 
 # field API library
 if (FIELD)
-    add_library(icicle_cuda_field SHARED
+    add_library(icicle_cuda_field STATIC
         src/field/cuda_mont.cu
         )
     target_include_directories(icicle_cuda_field PRIVATE include)
@@ -39,10 +35,10 @@ if (FIELD)
     target_include_directories(icicle_cuda_field PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
     target_link_libraries(icicle_cuda_field PRIVATE icicle_field ${CUDA_LIBRARIES} pthread) # Link to CUDA
 
-    install(TARGETS icicle_cuda_field
-        RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/backend/${FIELD}/cuda"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/backend/${FIELD}/cuda"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/backend/${FIELD}/cuda")
+    install(TARGETS icicle_device
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET icicle_cuda_field POST_BUILD
@@ -53,7 +49,7 @@ endif() # FIELD
 
 # curve API library
 if (CURVE)
-    add_library(icicle_cuda_curve SHARED        
+    add_library(icicle_cuda_curve STATIC        
         src/curve/cuda_mont.cu
     )
     if(MSM)
@@ -66,11 +62,6 @@ if (CURVE)
     set_target_properties(icicle_cuda_curve PROPERTIES OUTPUT_NAME "icicle_backend_cuda_curve_${CURVE}")
     target_include_directories(icicle_cuda_curve PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
     target_link_libraries(icicle_cuda_curve PRIVATE icicle_cuda_field icicle_curve ${CUDA_LIBRARIES} pthread) # Link to CUDA
-
-    install(TARGETS icicle_cuda_curve
-        RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/backend/${CURVE}/cuda"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/backend/${CURVE}/cuda"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/backend/${CURVE}/cuda")
 
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_custom_command(TARGET icicle_cuda_curve POST_BUILD

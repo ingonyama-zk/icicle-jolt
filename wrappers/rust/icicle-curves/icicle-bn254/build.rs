@@ -57,6 +57,12 @@ fn main() {
     println!("cargo:rustc-link-lib=icicle_field_bn254");
     println!("cargo:rustc-link-lib=icicle_curve_bn254");
     println!("cargo:rustc-link-lib=icicle_hash");
+    if cfg!(feature = "cuda_backend") {
+        println!("cargo:rustc-link-search={}/lib/backend/bn254/cuda", icicle_install_dir.display());
+        println!("cargo:rustc-link-lib=icicle_backend_cuda_field_bn254");
+        println!("cargo:rustc-link-lib=icicle_backend_cuda_curve_bn254");
+    }
+
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}/lib", icicle_install_dir.display()); // Add RPATH linker arguments
 
     // default backends dir
