@@ -18,7 +18,7 @@ cmake = "0.1.50"
 # Enabling backend features means building them with the ICICLE frontend.
 # Sources must be either local (under icicle/backend) or pulled during the build process.
 # Note: Backend repositories are private and not meant for user workflows. Users should install backends directly instead.
-default = ["cuda_backend"]
+default = []
 cuda_backend = []
 pull_cuda_backend = []
 metal_backend = []
